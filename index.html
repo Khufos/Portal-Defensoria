@@ -1237,6 +1237,44 @@
             document.getElementById('totalUnidades').textContent = new Set(items.map(i => i.unidadeId)).size;
         }
 
+        // Normalize text for intelligent matching
+        function normalizeText(text) {
+            if (!text) return '';
+            return text
+                .toLowerCase()
+                .normalize('NFD').replace(/[̀-ͯ]/g, '') // Remove accents
+                .replace(/[ªº°]/g, '') // Remove ordinal indicators
+                .replace(/\s+/g, ' ') // Normalize spaces
+                .trim();
+        }
+
+        // Check if text matches search term intelligently
+        function intelligentMatch(itemText, searchText) {
+            if (!searchText) return true;
+
+            const normalizedItem = normalizeText(itemText);
+            const normalizedSearch = normalizeText(searchText);
+
+            // Extract numbers from both strings for numeric comparison
+            const itemNumbers = normalizedItem.match(/\d+/g) || [];
+            const searchNumbers = normalizedSearch.match(/\d+/g) || [];
+
+            // Check if all search numbers are present in item
+            const numbersMatch = searchNumbers.every(num => itemNumbers.includes(num));
+
+            // Extract significant words (ignore articles, prepositions)
+            const ignoreWords = ['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os'];
+            const itemWords = normalizedItem.split(' ').filter(w => w.length > 1 && !ignoreWords.includes(w));
+            const searchWords = normalizedSearch.split(' ').filter(w => w.length > 1 && !ignoreWords.includes(w));
+
+            // Check if all search words are present in item
+            const wordsMatch = searchWords.every(searchWord =>
+                itemWords.some(itemWord => itemWord.includes(searchWord) || searchWord.includes(itemWord))
+            );
+
+            return numbersMatch && wordsMatch;
+        }
+
         function filterData() {
             const comarca = $('#searchComarca').val() || '';
             const unidade = $('#searchUnidade').val() || '';
@@ -1245,8 +1283,8 @@
 
             const filtered = data.filter(item =>
                 (comarca === '' || item.comarca === comarca) &&
-                (unidade === '' || item.unidade === unidade) &&
-                (vara === '' || item.vara === vara) &&
+                (unidade === '' || intelligentMatch(item.unidade, unidade)) &&
+                (vara === '' || intelligentMatch(item.vara, vara)) &&
                 (codigo === '' || item.codigo === codigo)
             );
 
@@ -1299,6 +1337,27 @@
             // Populate options first
             populateSelectOptions();
 
+            // Custom matcher for intelligent search in Select2
+            function customMatcher(params, data) {
+                // If there are no search terms, return all data
+                if ($.trim(params.term) === '') {
+                    return data;
+                }
+
+                // Skip if there is no 'text' property
+                if (typeof data.text === 'undefined') {
+                    return null;
+                }
+
+                // Use the intelligent match function
+                if (intelligentMatch(data.text, params.term)) {
+                    return data;
+                }
+
+                // Return null if the term doesn't match
+                return null;
+            }
+
             // Initialize Select2 with Portuguese language and search
             $('#searchComarca').select2({
                 placeholder: 'Buscar por Comarca...',
@@ -1318,12 +1377,16 @@
                 placeholder: 'Buscar por Unidade...',
                 allowClear: true,
                 width: '100%',
+                matcher: customMatcher,
                 language: {
                     noResults: function() {
                         return "Nenhum resultado encontrado";
                     },
                     searching: function() {
                         return "Buscando...";
+                    },
+                    inputTooShort: function() {
+                        return "Digite para buscar...";
                     }
                 }
             });
@@ -1332,12 +1395,16 @@
                 placeholder: 'Buscar por Vara...',
                 allowClear: true,
                 width: '100%',
+                matcher: customMatcher,
                 language: {
                     noResults: function() {
                         return "Nenhum resultado encontrado";
                     },
                     searching: function() {
                         return "Buscando...";
+                    },
+                    inputTooShort: function() {
+                        return "Digite para buscar...";
                     }
                 }
             });
