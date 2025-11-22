@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Defensoria Pública BA - Sistema de Busca</title>
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         * {
             margin: 0;
@@ -203,6 +205,68 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #a0aec0;
         }
+
+        /* Select2 Custom Styles */
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container--default .select2-selection--single {
+            height: auto;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding: 0;
+            line-height: normal;
+            color: #2d3748;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__placeholder {
+            color: #a0aec0;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 100%;
+            right: 10px;
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            outline: none;
+        }
+
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #4299e1;
+        }
+
+        .select2-dropdown {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .select2-search--dropdown .select2-search__field {
+            padding: 0.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #4299e1;
+            outline: none;
+        }
+
+        .select2-results__option {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -214,10 +278,18 @@
     <div class="container">
         <div class="search-box">
             <div class="search-grid">
-                <input type="text" id="searchComarca" class="search-input" placeholder="Buscar por Comarca...">
-                <input type="text" id="searchUnidade" class="search-input" placeholder="Buscar por Unidade...">
-                <input type="text" id="searchVara" class="search-input" placeholder="Buscar por Vara...">
-                <input type="text" id="searchCodigo" class="search-input" placeholder="Buscar por Código PJE...">
+                <select id="searchComarca" class="search-input">
+                    <option value="">Todas as Comarcas</option>
+                </select>
+                <select id="searchUnidade" class="search-input">
+                    <option value="">Todas as Unidades</option>
+                </select>
+                <select id="searchVara" class="search-input">
+                    <option value="">Todas as Varas</option>
+                </select>
+                <select id="searchCodigo" class="search-input">
+                    <option value="">Todos os Códigos PJE</option>
+                </select>
             </div>
             <button class="btn-clear" onclick="clearFilters()">Limpar Filtros</button>
         </div>
@@ -254,6 +326,11 @@
             </div>
         </div>
     </div>
+
+    <!-- jQuery (required for Select2) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
        const data = [
@@ -1161,16 +1238,16 @@
         }
 
         function filterData() {
-            const comarca = document.getElementById('searchComarca').value.toLowerCase();
-            const unidade = document.getElementById('searchUnidade').value.toLowerCase();
-            const vara = document.getElementById('searchVara').value.toLowerCase();
-            const codigo = document.getElementById('searchCodigo').value.toLowerCase();
+            const comarca = $('#searchComarca').val() || '';
+            const unidade = $('#searchUnidade').val() || '';
+            const vara = $('#searchVara').val() || '';
+            const codigo = $('#searchCodigo').val() || '';
 
-            const filtered = data.filter(item => 
-                item.comarca.toLowerCase().includes(comarca) &&
-                item.unidade.toLowerCase().includes(unidade) &&
-                item.vara.toLowerCase().includes(vara) &&
-                item.codigo.toLowerCase().includes(codigo)
+            const filtered = data.filter(item =>
+                (comarca === '' || item.comarca === comarca) &&
+                (unidade === '' || item.unidade === unidade) &&
+                (vara === '' || item.vara === vara) &&
+                (codigo === '' || item.codigo === codigo)
             );
 
             renderTable(filtered);
@@ -1178,20 +1255,117 @@
         }
 
         function clearFilters() {
-            document.getElementById('searchComarca').value = '';
-            document.getElementById('searchUnidade').value = '';
-            document.getElementById('searchVara').value = '';
-            document.getElementById('searchCodigo').value = '';
-            filterData();
+            $('#searchComarca').val('').trigger('change');
+            $('#searchUnidade').val('').trigger('change');
+            $('#searchVara').val('').trigger('change');
+            $('#searchCodigo').val('').trigger('change');
         }
 
-        document.getElementById('searchComarca').addEventListener('input', filterData);
-        document.getElementById('searchUnidade').addEventListener('input', filterData);
-        document.getElementById('searchVara').addEventListener('input', filterData);
-        document.getElementById('searchCodigo').addEventListener('input', filterData);
+        // Populate select options with unique values from data
+        function populateSelectOptions() {
+            // Extract unique values
+            const comarcas = [...new Set(data.map(item => item.comarca))].sort();
+            const unidades = [...new Set(data.map(item => item.unidade))].sort();
+            const varas = [...new Set(data.map(item => item.vara))].sort();
+            const codigos = [...new Set(data.map(item => item.codigo).filter(c => c !== ''))].sort((a, b) => a - b);
 
-        renderTable(data);
-        updateStats(data);
+            // Populate Comarca
+            const comarcaSelect = $('#searchComarca');
+            comarcas.forEach(comarca => {
+                comarcaSelect.append(new Option(comarca, comarca));
+            });
+
+            // Populate Unidade
+            const unidadeSelect = $('#searchUnidade');
+            unidades.forEach(unidade => {
+                unidadeSelect.append(new Option(unidade, unidade));
+            });
+
+            // Populate Vara
+            const varaSelect = $('#searchVara');
+            varas.forEach(vara => {
+                varaSelect.append(new Option(vara, vara));
+            });
+
+            // Populate Codigo
+            const codigoSelect = $('#searchCodigo');
+            codigos.forEach(codigo => {
+                codigoSelect.append(new Option(codigo, codigo));
+            });
+        }
+
+        // Initialize Select2 and set up event handlers
+        $(document).ready(function() {
+            // Populate options first
+            populateSelectOptions();
+
+            // Initialize Select2 with Portuguese language and search
+            $('#searchComarca').select2({
+                placeholder: 'Buscar por Comarca...',
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Nenhum resultado encontrado";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    }
+                }
+            });
+
+            $('#searchUnidade').select2({
+                placeholder: 'Buscar por Unidade...',
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Nenhum resultado encontrado";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    }
+                }
+            });
+
+            $('#searchVara').select2({
+                placeholder: 'Buscar por Vara...',
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Nenhum resultado encontrado";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    }
+                }
+            });
+
+            $('#searchCodigo').select2({
+                placeholder: 'Buscar por Código PJE...',
+                allowClear: true,
+                width: '100%',
+                language: {
+                    noResults: function() {
+                        return "Nenhum resultado encontrado";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    }
+                }
+            });
+
+            // Attach change event listeners
+            $('#searchComarca').on('change', filterData);
+            $('#searchUnidade').on('change', filterData);
+            $('#searchVara').on('change', filterData);
+            $('#searchCodigo').on('change', filterData);
+
+            // Initial render
+            renderTable(data);
+            updateStats(data);
+        });
     </script>
 </body>
 </html>
