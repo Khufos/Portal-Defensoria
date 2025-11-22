@@ -1,3 +1,16 @@
+function normalizeText(str) {
+    if (str == null) return '';
+    return String(str)
+        .toLowerCase()
+        .normalize('NFD')                  // separa diacríticos
+        .replace(/[\u0300-\u036f]/g, '')   // remove diacríticos
+        .replace(/[ºª°]/g, '')            // remove ordinais (3º -> 3)
+        .replace(/['"“”‘’`·•–—–−]/g, '')   // remove aspas e traços especiais
+        .replace(/[^a-z0-9\s]/g, ' ')     // substitui pontuação por espaço
+        .replace(/\s+/g, ' ')             // colapsa espaços
+        .trim();
+}
+
 function renderTable(items) {
     const tbody = document.getElementById('tableBody');
     
@@ -41,12 +54,26 @@ function filterData() {
     const vara = $('#searchVara').val() || '';
     const codigo = $('#searchCodigo').val() || '';
 
-    const filtered = data.filter(item =>
-        (comarca === '' || item.comarca === comarca) &&
-        (unidade === '' || item.unidade === unidade) &&
-        (vara === '' || item.vara === vara) &&
-        (codigo === '' || item.codigo === codigo)
-    );
+    const nComarca = normalizeText(comarca);
+    const nUnidade = normalizeText(unidade);
+    const nVara = normalizeText(vara);
+    const nCodigo = normalizeText(codigo);
+
+    const filtered = data.filter(item => {
+        const ni = {
+            comarca: normalizeText(item.comarca),
+            unidade: normalizeText(item.unidade),
+            vara: normalizeText(item.vara),
+            codigo: normalizeText(item.codigo)
+        };
+
+        return (
+            (nComarca === '' || ni.comarca.includes(nComarca)) &&
+            (nUnidade === '' || ni.unidade.includes(nUnidade)) &&
+            (nVara === '' || ni.vara.includes(nVara)) &&
+            (nCodigo === '' || ni.codigo.includes(nCodigo))
+        );
+    });
 
     renderTable(filtered);
     updateStats(filtered);
@@ -92,16 +119,30 @@ function populateSelectOptions() {
     });
 }
 
+// Custom matcher for Select2 using normalization
+function select2Matcher(params, data) {
+    if (!params.term || params.term.trim() === '') {
+        return data;
+    }
+    const term = normalizeText(params.term);
+    const text = normalizeText(data.text || '');
+    if (text.indexOf(term) > -1) {
+        return data;
+    }
+    return null;
+}
+
 // Initialize Select2 and set up event handlers
 $(document).ready(function() {
     // Populate options first
     populateSelectOptions();
 
-    // Initialize Select2 with Portuguese language and search
+    // Initialize Select2 with Portuguese language, search and matcher
     $('#searchComarca').select2({
         placeholder: 'Buscar por Comarca...',
         allowClear: true,
         width: '100%',
+        matcher: select2Matcher,
         language: {
             noResults: function() {
                 return "Nenhum resultado encontrado";
@@ -116,6 +157,7 @@ $(document).ready(function() {
         placeholder: 'Buscar por Unidade...',
         allowClear: true,
         width: '100%',
+        matcher: select2Matcher,
         language: {
             noResults: function() {
                 return "Nenhum resultado encontrado";
@@ -130,6 +172,7 @@ $(document).ready(function() {
         placeholder: 'Buscar por Vara...',
         allowClear: true,
         width: '100%',
+        matcher: select2Matcher,
         language: {
             noResults: function() {
                 return "Nenhum resultado encontrado";
@@ -144,6 +187,7 @@ $(document).ready(function() {
         placeholder: 'Buscar por Código PJE...',
         allowClear: true,
         width: '100%',
+        matcher: select2Matcher,
         language: {
             noResults: function() {
                 return "Nenhum resultado encontrado";
