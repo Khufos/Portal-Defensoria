@@ -80,10 +80,16 @@ function filterData() {
 }
 
 function clearFilters() {
+    // reset values
     $('#searchComarca').val('').trigger('change');
     $('#searchUnidade').val('').trigger('change');
     $('#searchVara').val('').trigger('change');
     $('#searchCodigo').val('').trigger('change');
+
+    // repopula opções completas e atualiza dependentes
+    populateSelectOptions();
+    refreshDependentSelects();
+    filterData();
 }
 
 // Populate select options with unique values from data
@@ -96,27 +102,89 @@ function populateSelectOptions() {
 
     // Populate Comarca
     const comarcaSelect = $('#searchComarca');
+    comarcaSelect.empty();
+    comarcaSelect.append(new Option('Todas as Comarcas', ''));
     comarcas.forEach(comarca => {
         comarcaSelect.append(new Option(comarca, comarca));
     });
 
-    // Populate Unidade
+    // Populate Unidade (full list)
     const unidadeSelect = $('#searchUnidade');
+    unidadeSelect.empty();
+    unidadeSelect.append(new Option('Todas as Unidades', ''));
     unidades.forEach(unidade => {
         unidadeSelect.append(new Option(unidade, unidade));
     });
 
-    // Populate Vara
+    // Populate Vara (full list)
     const varaSelect = $('#searchVara');
+    varaSelect.empty();
+    varaSelect.append(new Option('Todas as Varas', ''));
     varas.forEach(vara => {
         varaSelect.append(new Option(vara, vara));
     });
 
-    // Populate Codigo
+    // Populate Codigo (full list)
     const codigoSelect = $('#searchCodigo');
+    codigoSelect.empty();
+    codigoSelect.append(new Option('Todos os Códigos PJE', ''));
     codigos.forEach(codigo => {
         codigoSelect.append(new Option(codigo, codigo));
     });
+}
+
+// update options helper: keeps selection if still valid
+function updateSelectOptions($select, options, placeholderText) {
+    const current = $select.val() || '';
+    $select.empty();
+    $select.append(new Option(placeholderText, ''));
+    options.forEach(opt => $select.append(new Option(opt, opt)));
+    // restore if still valid
+    if (current && options.indexOf(current) > -1) {
+        $select.val(current);
+    } else {
+        $select.val('');
+    }
+    $select.trigger('change.select2'); // refresh Select2 UI
+}
+
+// Refresh dependent selects based on current selections
+function refreshDependentSelects() {
+    const selectedComarca = $('#searchComarca').val() || '';
+    const selectedUnidade = $('#searchUnidade').val() || '';
+
+    // Unidades: if comarca selected, show only unidades daquela comarca
+    const unidades = [...new Set(
+        data
+            .filter(item => !selectedComarca || item.comarca === selectedComarca)
+            .map(i => i.unidade)
+    )].sort();
+    updateSelectOptions($('#searchUnidade'), unidades, 'Todas as Unidades');
+
+    // Varas: filter by comarca + unidade (if selected)
+    const varas = [...new Set(
+        data
+            .filter(item => {
+                if (selectedComarca && item.comarca !== selectedComarca) return false;
+                if (selectedUnidade && item.unidade !== selectedUnidade) return false;
+                return true;
+            })
+            .map(i => i.vara)
+    )].sort();
+    updateSelectOptions($('#searchVara'), varas, 'Todas as Varas');
+
+    // Codigos: same logic as varas
+    const codigos = [...new Set(
+        data
+            .filter(item => {
+                if (selectedComarca && item.comarca !== selectedComarca) return false;
+                if (selectedUnidade && item.unidade !== selectedUnidade) return false;
+                return true;
+            })
+            .map(i => i.codigo)
+            .filter(c => c !== '')
+    )].sort((a, b) => a - b);
+    updateSelectOptions($('#searchCodigo'), codigos, 'Todos os Códigos PJE');
 }
 
 // Custom matcher for Select2 using normalization
@@ -144,12 +212,8 @@ $(document).ready(function() {
         width: '100%',
         matcher: select2Matcher,
         language: {
-            noResults: function() {
-                return "Nenhum resultado encontrado";
-            },
-            searching: function() {
-                return "Buscando...";
-            }
+            noResults: function() { return "Nenhum resultado encontrado"; },
+            searching: function() { return "Buscando..."; }
         }
     });
 
@@ -159,12 +223,8 @@ $(document).ready(function() {
         width: '100%',
         matcher: select2Matcher,
         language: {
-            noResults: function() {
-                return "Nenhum resultado encontrado";
-            },
-            searching: function() {
-                return "Buscando...";
-            }
+            noResults: function() { return "Nenhum resultado encontrado"; },
+            searching: function() { return "Buscando..."; }
         }
     });
 
@@ -174,12 +234,8 @@ $(document).ready(function() {
         width: '100%',
         matcher: select2Matcher,
         language: {
-            noResults: function() {
-                return "Nenhum resultado encontrado";
-            },
-            searching: function() {
-                return "Buscando...";
-            }
+            noResults: function() { return "Nenhum resultado encontrado"; },
+            searching: function() { return "Buscando..."; }
         }
     });
 
@@ -189,22 +245,29 @@ $(document).ready(function() {
         width: '100%',
         matcher: select2Matcher,
         language: {
-            noResults: function() {
-                return "Nenhum resultado encontrado";
-            },
-            searching: function() {
-                return "Buscando...";
-            }
+            noResults: function() { return "Nenhum resultado encontrado"; },
+            searching: function() { return "Buscando..."; }
         }
     });
 
-    // Attach change event listeners
-    $('#searchComarca').on('change', filterData);
-    $('#searchUnidade').on('change', filterData);
+    // Attach change event listeners (cascade + filter)
+    $('#searchComarca').on('change', function() {
+        // update unidades/varas/codigos based on selected comarca
+        refreshDependentSelects();
+        filterData();
+    });
+
+    $('#searchUnidade').on('change', function() {
+        // update varas/codigos based on selected unidade (and comarca)
+        refreshDependentSelects();
+        filterData();
+    });
+
     $('#searchVara').on('change', filterData);
     $('#searchCodigo').on('change', filterData);
 
-    // Initial render
+    // Initial dependent population and render
+    refreshDependentSelects();
     renderTable(data);
     updateStats(data);
 });
