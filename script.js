@@ -98,12 +98,22 @@ function clearFilters() {
     filterData();
 }
 
+// Helper function to sort items numerically
+function sortNumerically(items) {
+    return items.sort((a, b) => {
+        const numA = parseInt(a.match(/(\d+)/)?.[0] || '0');
+        const numB = parseInt(b.match(/(\d+)/)?.[0] || '0');
+        if (numA !== numB) return numA - numB;
+        return a.localeCompare(b, 'pt');
+    });
+}
+
 // Populate select options with unique values from data
 function populateSelectOptions() {
     // Extract unique values
-    const comarcas = [...new Set(data.map(item => item.comarca))].sort();
-    const unidades = [...new Set(data.map(item => item.unidade))].sort();
-    const varas = [...new Set(data.map(item => item.vara))].sort();
+    const comarcas = [...new Set(data.map(item => item.comarca))].sort((a, b) => a.localeCompare(b, 'pt'));
+    const unidades = sortNumerically([...new Set(data.map(item => item.unidade))]);
+    const varas = sortNumerically([...new Set(data.map(item => item.vara))]);
     const codigos = [...new Set(data.map(item => item.codigo).filter(c => c !== ''))].sort((a, b) => a - b);
 
     // Populate Comarca
@@ -160,15 +170,15 @@ function refreshDependentSelects() {
     const selectedUnidade = $('#searchUnidade').val() || '';
 
     // Unidades: if comarca selected, show only unidades daquela comarca
-    const unidades = [...new Set(
+    const unidades = sortNumerically([...new Set(
         data
             .filter(item => !selectedComarca || item.comarca === selectedComarca)
             .map(i => i.unidade)
-    )].sort();
+    )]);
     updateSelectOptions($('#searchUnidade'), unidades, 'Todas as Unidades');
 
     // Varas: filter by comarca + unidade (if selected)
-    const varas = [...new Set(
+    const varas = sortNumerically([...new Set(
         data
             .filter(item => {
                 if (selectedComarca && item.comarca !== selectedComarca) return false;
@@ -176,7 +186,7 @@ function refreshDependentSelects() {
                 return true;
             })
             .map(i => i.vara)
-    )].sort();
+    )]);
     updateSelectOptions($('#searchVara'), varas, 'Todas as Varas');
 
     // Codigos: same logic as varas
@@ -360,9 +370,38 @@ $(document).ready(function() {
         lucide.createIcons();
     }
     
+    // Helper function for smart matching (considers word boundaries for numbers)
+    function smartMatch(text, searchTerm) {
+        const normalizedText = normalizeText(text);
+        const normalizedSearch = normalizeText(searchTerm);
+        
+        // If search term starts with a number followed by "o" or space, match exact ordinal
+        const ordinalMatch = normalizedSearch.match(/^(\d+)\s*(o)?\s*/);
+        if (ordinalMatch) {
+            const searchNum = ordinalMatch[1];
+            // Extract the number at the beginning of the text
+            const textMatch = normalizedText.match(/^(\d+)\s*(o)?\s*/);
+            if (textMatch) {
+                const textNum = textMatch[1];
+                // Only match if the numbers are exactly the same
+                if (searchNum === textNum) {
+                    // Check if the rest of the search term matches
+                    const restOfSearch = normalizedSearch.substring(ordinalMatch[0].length);
+                    if (restOfSearch === '' || normalizedText.includes(restOfSearch)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        
+        // Default: simple includes for non-ordinal searches
+        return normalizedText.includes(normalizedSearch);
+    }
+    
     // Sidebar search functionality
     $('#sidebarSearch').on('input', function() {
-        const searchTerm = normalizeText($(this).val());
+        const searchTerm = $(this).val().trim();
         
         if (searchTerm === '') {
             // Show all items
@@ -374,20 +413,23 @@ $(document).ready(function() {
             // Filter items
             $('.comarca-item').each(function() {
                 const $comarcaItem = $(this);
-                const comarcaName = normalizeText($comarcaItem.find('.comarca-title span').text());
+                const comarcaName = $comarcaItem.find('.comarca-title span').text();
                 let hasMatch = false;
                 
                 // Check if comarca matches
-                if (comarcaName.includes(searchTerm)) {
+                if (smartMatch(comarcaName, searchTerm)) {
                     hasMatch = true;
                     $comarcaItem.find('.unit-item').show();
                 } else {
                     // Check units
                     $comarcaItem.find('.unit-item').each(function() {
                         const $unitItem = $(this);
-                        const unitText = normalizeText($unitItem.text());
+                        // Get only the text content, excluding the badge
+                        const unitText = $unitItem.contents().filter(function() {
+                            return this.nodeType === 3; // Text nodes only
+                        }).text();
                         
-                        if (unitText.includes(searchTerm)) {
+                        if (smartMatch(unitText, searchTerm)) {
                             $unitItem.show();
                             hasMatch = true;
                         } else {
@@ -396,8 +438,8 @@ $(document).ready(function() {
                             let hasVaraMatch = false;
                             
                             $varaList.find('.vara-item').each(function() {
-                                const varaText = normalizeText($(this).text());
-                                if (varaText.includes(searchTerm)) {
+                                const varaText = $(this).text();
+                                if (smartMatch(varaText, searchTerm)) {
                                     hasVaraMatch = true;
                                 }
                             });
