@@ -19,15 +19,16 @@ function renderTable(items) {
             <tr>
                 <td colspan="5">
                     <div class="empty-state">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
+                        <i data-lucide="search-x"></i>
                         <h3>Nenhum resultado encontrado</h3>
                         <p>Tente ajustar os filtros de busca</p>
                     </div>
                 </td>
             </tr>
         `;
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
         return;
     }
 
@@ -46,6 +47,11 @@ function updateStats(items) {
     document.getElementById('totalResults').textContent = items.length;
     document.getElementById('totalComarcas').textContent = new Set(items.map(i => i.comarca)).size;
     document.getElementById('totalUnidades').textContent = new Set(items.map(i => i.unidadeId)).size;
+    
+    // Reinitialize icons after stats update
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
 function filterData() {
@@ -187,6 +193,82 @@ function refreshDependentSelects() {
     updateSelectOptions($('#searchCodigo'), codigos, 'Todos os Códigos PJE');
 }
 
+// expectedStructure removed — sidebar now shows only actual data varas
+
+// Build sidebar from expectedStructure and data
+function buildSidebar() {
+    const $list = $('#sidebarList');
+    $list.empty();
+
+    // get all comarcas from data
+    const comarcas = [...new Set(data.map(d => d.comarca))].sort((a, b) => a.localeCompare(b, 'pt'));
+
+    comarcas.forEach(comarcaName => {
+        const comarcaDiv = $('<div/>', { class: 'comarca-item' });
+        const title = $('<div/>', { class: 'comarca-title' }).append(
+            $('<span/>').text(comarcaName)
+        );
+
+        const unitList = $('<div/>', { class: 'unit-list' });
+
+        // units present in data for this comarca
+        const units = [...new Set(data.filter(d => d.comarca === comarcaName).map(d => d.unidade))];
+        
+        // Sort units numerically by extracting the number at the beginning
+        units.sort((a, b) => {
+            const numA = parseInt(a.match(/(\d+)/)?.[0] || '0');
+            const numB = parseInt(b.match(/(\d+)/)?.[0] || '0');
+            if (numA !== numB) return numA - numB;
+            return a.localeCompare(b, 'pt');
+        });
+
+        units.forEach(unitName => {
+            const unitItem = $('<div/>', { class: 'unit-item' }).text(unitName);
+            const varaList = $('<div/>', { class: 'vara-list' });
+
+            // collect varas present in data for this comarca/unit
+            const actualVaras = [...new Set(data.filter(d => d.comarca === comarcaName && d.unidade === unitName).map(d => d.vara))];
+            const allVaras = [...new Set(actualVaras)];
+
+            // Sort varas numerically by extracting the number at the beginning
+            allVaras.sort((a, b) => {
+                const numA = parseInt(a.match(/(\d+)/)?.[0] || '0');
+                const numB = parseInt(b.match(/(\d+)/)?.[0] || '0');
+                if (numA !== numB) return numA - numB;
+                return a.localeCompare(b, 'pt');
+            });
+
+            allVaras.forEach(vara => {
+                const present = actualVaras.some(av => normalizeText(av) === normalizeText(vara) || normalizeText(av).includes(normalizeText(vara)));
+                const vItem = $('<div/>', { class: 'vara-item ' + (present ? 'present' : 'missing') }).append(
+                    $('<span/>').text(vara),
+                    $('<span/>', { class: 'small' }).text(present ? 'cadastrado' : 'faltando')
+                );
+                varaList.append(vItem);
+            });
+
+            // click unit to toggle
+            // add badge with count of varas
+            const badge = $('<span/>', { class: 'unit-badge' }).text(actualVaras.length);
+            unitItem.append(badge);
+
+            unitItem.on('click', function() {
+                varaList.slideToggle(120);
+                unitItem.toggleClass('open');
+            });
+
+            unitList.append(unitItem, varaList);
+        });
+
+        comarcaDiv.append(title, unitList);
+        $list.append(comarcaDiv);
+    });
+
+    // compare feature removed — no button handler
+}
+
+// compare function removed per request
+
 // Custom matcher for Select2 using normalization
 function select2Matcher(params, data) {
     if (!params.term || params.term.trim() === '') {
@@ -270,4 +352,74 @@ $(document).ready(function() {
     refreshDependentSelects();
     renderTable(data);
     updateStats(data);
+    // build sidebar after initial population
+    buildSidebar();
+    
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+    
+    // Sidebar search functionality
+    $('#sidebarSearch').on('input', function() {
+        const searchTerm = normalizeText($(this).val());
+        
+        if (searchTerm === '') {
+            // Show all items
+            $('.comarca-item').show();
+            $('.unit-item').show();
+            $('.vara-list').hide();
+            $('.unit-item').removeClass('open');
+        } else {
+            // Filter items
+            $('.comarca-item').each(function() {
+                const $comarcaItem = $(this);
+                const comarcaName = normalizeText($comarcaItem.find('.comarca-title span').text());
+                let hasMatch = false;
+                
+                // Check if comarca matches
+                if (comarcaName.includes(searchTerm)) {
+                    hasMatch = true;
+                    $comarcaItem.find('.unit-item').show();
+                } else {
+                    // Check units
+                    $comarcaItem.find('.unit-item').each(function() {
+                        const $unitItem = $(this);
+                        const unitText = normalizeText($unitItem.text());
+                        
+                        if (unitText.includes(searchTerm)) {
+                            $unitItem.show();
+                            hasMatch = true;
+                        } else {
+                            // Check varas
+                            const $varaList = $unitItem.next('.vara-list');
+                            let hasVaraMatch = false;
+                            
+                            $varaList.find('.vara-item').each(function() {
+                                const varaText = normalizeText($(this).text());
+                                if (varaText.includes(searchTerm)) {
+                                    hasVaraMatch = true;
+                                }
+                            });
+                            
+                            if (hasVaraMatch) {
+                                $unitItem.show();
+                                $varaList.show();
+                                $unitItem.addClass('open');
+                                hasMatch = true;
+                            } else {
+                                $unitItem.hide();
+                            }
+                        }
+                    });
+                }
+                
+                if (hasMatch) {
+                    $comarcaItem.show();
+                } else {
+                    $comarcaItem.hide();
+                }
+            });
+        }
+    });
 });

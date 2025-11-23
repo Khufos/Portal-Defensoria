@@ -6,63 +6,111 @@
     <title>Defensoria Pública BA - Sistema de Busca</title>
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="header">
-        <h1>🏛️ Defensoria Pública da Bahia</h1>
-        <p>Sistema de Consulta de Unidades e Varas</p>
+        <div class="header-content">
+            <div class="header-icon">
+                <i data-lucide="scale"></i>
+            </div>
+            <div>
+                <h1>Defensoria Pública da Bahia</h1>
+                <p>Sistema de Consulta de Unidades e Varas</p>
+            </div>
+        </div>
     </div>
 
     <div class="container">
-        <div class="search-box">
-            <div class="search-grid">
-                <select id="searchComarca" class="search-input">
-                    <option value="">Todas as Comarcas</option>
-                </select>
-                <select id="searchUnidade" class="search-input">
-                    <option value="">Todas as Unidades</option>
-                </select>
-                <select id="searchVara" class="search-input">
-                    <option value="">Todas as Varas</option>
-                </select>
-                <select id="searchCodigo" class="search-input">
-                    <option value="">Todos os Códigos PJE</option>
-                </select>
-            </div>
-            <button class="btn-clear" onclick="clearFilters()">Limpar Filtros</button>
-        </div>
+        <div class="layout">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">
+                        <i data-lucide="folder-tree"></i>
+                        <h3>Comarcas</h3>
+                    </div>
+                    <small class="small">Clique para expandir unidades</small>
+                    <div class="sidebar-search">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="sidebarSearch" placeholder="Buscar comarca ou unidade..." />
+                    </div>
+                </div>
+                <div id="sidebarList" class="sidebar-list">
+                    <!-- Dynamically populated by script.js -->
+                </div>
+            </aside>
 
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-number" id="totalResults">0</div>
-                <div class="stat-label">Registros</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalComarcas">0</div>
-                <div class="stat-label">Comarcas</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalUnidades">0</div>
-                <div class="stat-label">Unidades</div>
-            </div>
-        </div>
+            <main class="main-content">
+                <div class="search-box">
+                    <div class="search-grid">
+                        <select id="searchComarca" class="search-input">
+                            <option value="">Todas as Comarcas</option>
+                        </select>
+                        <select id="searchUnidade" class="search-input">
+                            <option value="">Todas as Unidades</option>
+                        </select>
+                        <select id="searchVara" class="search-input">
+                            <option value="">Todas as Varas</option>
+                        </select>
+                        <select id="searchCodigo" class="search-input">
+                            <option value="">Todos os Códigos PJE</option>
+                        </select>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters()">
+                        <i data-lucide="x-circle"></i>
+                        Limpar Filtros
+                    </button>
+                </div>
 
-        <div class="results-container">
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Comarca</th>
-                            <th>ID</th>
-                            <th>Unidade Defensorial</th>
-                            <th>Vara</th>
-                            <th>Código PJE</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-            </div>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i data-lucide="file-text"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number" id="totalResults">0</div>
+                            <div class="stat-label">Registros</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i data-lucide="map-pin"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number" id="totalComarcas">0</div>
+                            <div class="stat-label">Comarcas</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i data-lucide="building-2"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-number" id="totalUnidades">0</div>
+                            <div class="stat-label">Unidades</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-container">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Comarca</th>
+                                    <th>ID</th>
+                                    <th>Unidade Defensorial</th>
+                                    <th>Vara</th>
+                                    <th>Código PJE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
@@ -72,5 +120,9 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="data.js"></script>
     <script src="script.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>
