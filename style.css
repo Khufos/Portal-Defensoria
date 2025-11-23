@@ -127,12 +127,15 @@ body{
 .table-wrapper{overflow-x:auto;max-height:66vh}
 table{width:100%;border-collapse:collapse;min-width:760px;color:var(--text)}
 thead{
-    background: rgba(255,255,255,0.02);
-    position:sticky;top:0;z-index:5;
-    backdrop-filter: blur(6px);
+    background: linear-gradient(180deg, rgba(4,18,32,0.96), rgba(6,24,40,0.96)); /* fundo escuro+opaco */
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: none; /* remove blur para evitar cores vazando por baixo */
+    border-bottom: 1px solid rgba(139,233,253,0.12); /* linha sutil azul-clara */
 }
 th{
-    padding:0.9rem 1rem;text-align:left;font-weight:700;color:var(--muted);
+    padding:0.9rem 1rem;text-align:left;font-weight:700;color:var(--text); /* texto branco suave */
     font-size:0.82rem;text-transform:uppercase;letter-spacing:0.6px;
     border-bottom:1px solid rgba(255,255,255,0.02);
 }
@@ -140,34 +143,34 @@ td{padding:0.9rem 1rem;border-bottom:1px solid rgba(255,255,255,0.02);font-size:
 tbody tr{transition:background 160ms ease, transform 120ms ease}
 tbody tr:hover{background: linear-gradient(90deg, rgba(189,147,249,0.04), rgba(139,233,253,0.02));transform:translateY(-2px)}
 
-/* Badge */
+/* Botão Limpar Filtros — trocado para azul/ciano (não vermelho) */
+.btn-clear{
+    background: linear-gradient(90deg, var(--accent-2), #39c0e6); /* var(--accent-2) = #8be9fd */
+    color: #04262a; /* texto escuro para contraste com o ciano claro */
+    border: 0;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: transform 120ms, box-shadow 120ms;
+    box-shadow: 0 6px 16px rgba(3,12,18,0.35);
+}
+.btn-clear:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(3,12,18,0.45);
+}
+
+/* Badge usa mesmo fundo do botão para consistência */
 .badge {
     display: inline-block;
     padding: 0.25rem 0.6rem;
     border-radius: 999px;
-    background: linear-gradient(90deg, rgba(255,85,85,0.9), rgba(205,50,50,0.9)); /* mesma do botão Limpar Filtros */
-    color: var(--text);
+    background: linear-gradient(90deg, var(--accent-2), #39c0e6); /* mesmo gradiente do botão */
+    color: #04262a; /* texto escuro para legibilidade */
     font-weight: 600;
     font-size: 0.82rem;
     border: 1px solid rgba(255,255,255,0.03);
-}
-
-/* Empty state */
-.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted)}
-.empty-state svg{width:72px;height:72px;margin-bottom:0.6rem;opacity:0.14}
-
-/* Buttons */
-.btn-clear{
-    background: linear-gradient(90deg, rgba(255,85,85,0.9), rgba(205,50,50,0.9));
-    color:var(--text;border:0);
-    padding:0.6rem 1rem;border-radius:8px;
-    cursor:pointer;
-    font-size:0.95rem;font-weight:500;
-    transition: background 0.2s, transform 0.1s;
-}
-.btn-clear:hover{
-    background: linear-gradient(90deg, rgba(255,85,85,1), rgba(205,50,50,1));
-    transform: translateY(-1px);
 }
 
 /* Scrollbar (escuro, consistente com o tema) */
