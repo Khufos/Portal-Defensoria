@@ -54,30 +54,29 @@ function updateStats(items) {
     }
 }
 
+// Helper function for exact matching (used in filters)
+function exactMatch(itemText, filterValue) {
+    if (filterValue === '') return true;
+    
+    const normalizedItem = normalizeText(itemText);
+    const normalizedFilter = normalizeText(filterValue);
+    
+    // For exact filter matches, we want exact string equality
+    return normalizedItem === normalizedFilter;
+}
+
 function filterData() {
     const comarca = $('#searchComarca').val() || '';
     const unidade = $('#searchUnidade').val() || '';
     const vara = $('#searchVara').val() || '';
     const codigo = $('#searchCodigo').val() || '';
 
-    const nComarca = normalizeText(comarca);
-    const nUnidade = normalizeText(unidade);
-    const nVara = normalizeText(vara);
-    const nCodigo = normalizeText(codigo);
-
     const filtered = data.filter(item => {
-        const ni = {
-            comarca: normalizeText(item.comarca),
-            unidade: normalizeText(item.unidade),
-            vara: normalizeText(item.vara),
-            codigo: normalizeText(item.codigo)
-        };
-
         return (
-            (nComarca === '' || ni.comarca.includes(nComarca)) &&
-            (nUnidade === '' || ni.unidade.includes(nUnidade)) &&
-            (nVara === '' || ni.vara.includes(nVara)) &&
-            (nCodigo === '' || ni.codigo.includes(nCodigo))
+            exactMatch(item.comarca, comarca) &&
+            exactMatch(item.unidade, unidade) &&
+            exactMatch(item.vara, vara) &&
+            exactMatch(item.codigo, codigo)
         );
     });
 
